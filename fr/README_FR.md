@@ -1,6 +1,6 @@
 # HDTI HomeLab IaC
 
-Infrastructure as Code du homelab Proxmox VE `hdti` : Terraform (`bpg/proxmox`) avec state distant HCP Terraform, golden templates Packer et GitHub Actions sur runners self-hosted.
+Infrastructure as Code du homelab Proxmox VE `hdti` : Terraform (`bpg/proxmox`, `darkhonor/technitium`) avec state distant HCP Terraform, golden templates Packer et GitHub Actions sur runners self-hosted. Les LXC du réseau cœur sont provisionnés par community scripts, leur configuration est gérée en code ([ADR-0004](../docs/adr/0004-hybrid-provisioning.md)).
 
 > 🇬🇧 English version: [../README.md](../README.md)
 
@@ -70,16 +70,17 @@ client ──► DNS public Cloudflare
 
 * L'automatisation Proxmox utilise des tokens API dédiés à privilèges minimaux avec séparation des privilèges (`terraform@pve!iac`, `packer@pve!build`, `pulse@pve!monitor`), jamais `root@pam`. Voir le [runbook tokens API Proxmox](../docs/runbooks/proxmox-api-tokens.md).
 * Les tokens Cloudflare sont limités à `Zone:DNS:Edit` sur `hdti.ca`, un par consommateur (Caddy, DDNS).
-* Les secrets sont d'abord stockés en variables sensibles HCP Terraform, puis migrés vers HashiCorp Vault ([ADR-0003](../docs/adr/0003-vault-hosting.md)).
+* Les secrets sont d'abord fournis en variables d'environnement (poste de travail, puis GitHub Secrets sur le runner), car l'exécution locale HCP Terraform n'injecte pas les variables de workspace, puis migrés vers HashiCorp Vault ([ADR-0003](../docs/adr/0003-vault-hosting.md), [ADR-0004](../docs/adr/0004-hybrid-provisioning.md)).
 * Analyse avant commit avec `gitleaks`, `tflint` et `trivy`.
 
 ## Feuille de route
 
 - [x] Post-installation Proxmox VE sur `pve` et `pve2`, cluster `hdti-homelab`
 - [x] Rôles, utilisateurs et tokens API Proxmox
-- [ ] Workspaces HCP Terraform (exécution locale) et squelette `terraform/`
-- [ ] Technitium DNS (`dns-01`, `dns-02`), puis bascule du DHCP du routeur
-- [ ] Caddy avec certificat wildcard, certificats ACME sur les nœuds PVE
+- [x] Décision de provisioning hybride ([ADR-0004](../docs/adr/0004-hybrid-provisioning.md))
+- [ ] Technitium DNS (`dns-01`, `dns-02`) via community scripts, puis bascule du DHCP du routeur
+- [ ] Root Terraform DNS (`terraform/environments/prod/dns/`, workspace `homelab-prod-dns`) : zones et enregistrements
+- [ ] Caddy via community script, Caddyfile versionné, certificats ACME sur les nœuds PVE
 - [ ] Runner GitHub self-hosted
 - [ ] HashiCorp Vault et migration des secrets
 - [ ] Supervision Pulse

@@ -58,7 +58,7 @@ curl -k -H "Authorization: PVEAPIToken=terraform@pve!iac=<secret>" https://192.1
 
 ## Consumption
 
-Terraform reads the token from environment variables, stored as **sensitive** HCP Terraform variables (later Vault):
+Terraform reads the token from environment variables on the machine running Terraform. HCP Terraform workspaces use local execution mode, so workspace variables are **not** injected: set them in the workstation shell, then as GitHub Secrets on the runner, and later retrieve them from Vault ([ADR-0004](../adr/0004-hybrid-provisioning.md)):
 
 ```text
 PROXMOX_VE_ENDPOINT=https://192.168.2.200:8006/

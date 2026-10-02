@@ -54,4 +54,5 @@ Internal services need friendly names under the public domain `hdti.ca` (Cloudfl
 * [ ] Deploy Technitium, then switch router DHCP DNS to `.210` / `.211`.
 
 ## Corrections & Revisions
-* None.
+* 2026-10-02: `dns-01`, `dns-02`, `caddy`, and `wireguard` are provisioned with community scripts; the `hdti.ca` Forwarder zone, records, and Technitium settings are managed by Terraform (`darkhonor/technitium`); the Caddyfile is versioned in `config/caddy/Caddyfile`. See [ADR-0004](0004-hybrid-provisioning.md).
+* 2026-10-02: The community script xCaddy addon builds without extra modules: build with `xcaddy build --with github.com/caddy-dns/cloudflare`, replace the stock binary, and hold the package (`apt-mark hold caddy`) so upgrades do not restore it.

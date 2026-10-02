@@ -22,5 +22,7 @@ Registry of [community-scripts.org](https://community-scripts.github.io/ProxmoxV
 
 ## Rules
 * Read a script before running it.
-* Prefer Terraform-managed LXCs/VMs; use community scripts only for host-level tooling or one-off bootstrap.
-* Record date, target, options, and result for every execution.
+* Use community scripts for host-level tooling and for LXCs designated script-managed in [ADR-0004](../adr/0004-hybrid-provisioning.md) (core network: `dns-01`, `dns-02`, `caddy`, `wireguard`); other workloads are decided per service.
+* Run LXC scripts in *Advanced* mode and document every option in the service runbook.
+* Tag script-managed guests `managed-by-script`; never import them into Terraform.
+* Record date, target, options, script commit SHA, and result for every execution.
