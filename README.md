@@ -1,6 +1,6 @@
 # HDTI HomeLab IaC
 
-Infrastructure as Code for the `hdti` Proxmox VE homelab: Terraform (`bpg/proxmox`) with HCP Terraform remote state, Packer golden templates, and GitHub Actions on self-hosted runners.
+Infrastructure as Code for the `hdti` Proxmox VE homelab: Terraform (`bpg/proxmox`, `darkhonor/technitium`) with HCP Terraform remote state, Packer golden templates, and GitHub Actions on self-hosted runners. Core network LXCs are provisioned with community scripts, their configuration managed as code ([ADR-0004](docs/adr/0004-hybrid-provisioning.md)).
 
 > 🇫🇷 French version: [fr/README_FR.md](fr/README_FR.md)
 
@@ -70,16 +70,17 @@ client ──► Cloudflare public DNS
 
 * Proxmox automation uses dedicated, least-privilege API tokens with privilege separation (`terraform@pve!iac`, `packer@pve!build`, `pulse@pve!monitor`), never `root@pam`. See [Proxmox API tokens runbook](docs/runbooks/proxmox-api-tokens.md).
 * Cloudflare tokens are scoped to `Zone:DNS:Edit` on `hdti.ca`, one per consumer (Caddy, DDNS).
-* Secrets are bootstrapped as HCP Terraform sensitive variables, then migrated to HashiCorp Vault ([ADR-0003](docs/adr/0003-vault-hosting.md)).
+* Secrets are bootstrapped as environment variables (workstation, then GitHub Secrets on the runner), since HCP Terraform local execution does not inject workspace variables, then migrated to HashiCorp Vault ([ADR-0003](docs/adr/0003-vault-hosting.md), [ADR-0004](docs/adr/0004-hybrid-provisioning.md)).
 * Pre-commit scanning with `gitleaks`, `tflint`, and `trivy`.
 
 ## Roadmap
 
 - [x] Proxmox VE post-install on `pve` and `pve2`, cluster `hdti-homelab`
 - [x] Proxmox API roles, users, and tokens
-- [ ] HCP Terraform workspaces (local execution) and `terraform/` skeleton
-- [ ] Technitium DNS (`dns-01`, `dns-02`), then router DHCP switch
-- [ ] Caddy with wildcard certificate, ACME certificates on PVE nodes
+- [x] Hybrid provisioning decision ([ADR-0004](docs/adr/0004-hybrid-provisioning.md))
+- [ ] Technitium DNS (`dns-01`, `dns-02`) via community scripts, then router DHCP switch
+- [ ] Terraform DNS root (`terraform/environments/prod/dns/`, workspace `homelab-prod-dns`): zones and records
+- [ ] Caddy via community script, versioned Caddyfile, ACME certificates on PVE nodes
 - [ ] GitHub self-hosted runner
 - [ ] HashiCorp Vault and secrets migration
 - [ ] Pulse monitoring
