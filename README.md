@@ -51,25 +51,26 @@ Unlisted addresses in each range are reserved for growth.
 
 ### Split-Horizon DNS
 
-Technitium hosts a **Conditional Forwarder Zone** for `hdti.ca`: internal records (`<svc>.hdti.ca`) resolve locally to Caddy, everything else (public records, other domains) is forwarded to Cloudflare. Caddy serves a Let's Encrypt wildcard `*.hdti.ca` obtained through the Cloudflare DNS-01 challenge. Only WireGuard (UDP 51820) is exposed to the Internet. See [ADR-0002](docs/adr/0002-split-horizon-dns.md).
+Technitium is authoritative for the private zone **`home.hdti.ca`**: service names (`<svc>.home.hdti.ca`) resolve to Caddy through a wildcard record, host names (`pve`, `pve2`, `dns-01`, ...) to their own IP, and every other name is forwarded to Cloudflare. Caddy serves a Let's Encrypt wildcard `*.home.hdti.ca` obtained through the Cloudflare DNS-01 challenge. `hdti.ca` stays public in Cloudflare and only publishes `vpn.hdti.ca`; WireGuard (UDP 51820) is the only service exposed to the Internet. The same URLs work on the LAN and over the VPN. See [ADR-0002](docs/adr/0002-split-horizon-dns.md) and [ADR-0005](docs/adr/0005-internal-dns-subdomain.md).
 
 ```
 INTERNAL (LAN or VPN)
-client ──► Technitium (.210 / .211)
-            ├─ <svc>.hdti.ca      → local record → Caddy (.212) ──TLS *.hdti.ca──► backend
-            └─ any other name     → forwarded to Cloudflare 1.1.1.1 (DoH)
+client ──► Technitium cluster (dns-01 .210 primary / dns-02 .211)
+            ├─ <svc>.home.hdti.ca   → wildcard → Caddy (.212) ──TLS *.home.hdti.ca──► backend
+            ├─ <host>.home.hdti.ca  → host record → host IP
+            └─ any other name       → forwarded to Cloudflare 1.1.1.1 / 1.0.0.1
 
 EXTERNAL (Internet)
 client ──► Cloudflare public DNS
-            ├─ vpn.hdti.ca        → WAN IP (kept current by DDNS .214, DNS-only)
-            │                        └─► router UDP 51820 ──► WireGuard (.213) ──► INTERNAL flow
-            └─ internal services  → not published
+            ├─ vpn.hdti.ca          → WAN IP (kept current by DDNS .214, DNS-only)
+            │                          └─► router UDP 51820 ──► WireGuard (.213) ──► INTERNAL flow
+            └─ *.home.hdti.ca       → not published
 ```
 
 ## Security
 
 * Proxmox automation uses dedicated, least-privilege API tokens with privilege separation (`terraform@pve!iac`, `packer@pve!build`, `pulse@pve!monitor`), never `root@pam`. See [Proxmox API tokens runbook](docs/runbooks/proxmox-api-tokens.md).
-* Cloudflare tokens are scoped to `Zone:DNS:Edit` on `hdti.ca`, one per consumer (Caddy, DDNS).
+* Cloudflare tokens are scoped to `hdti.ca`, one per consumer (Caddy, DDNS), with `Zone:DNS:Edit`; the Caddy token also has `Zone:Zone:Read`.
 * Secrets are bootstrapped as environment variables (workstation, then GitHub Secrets on the runner), since HCP Terraform local execution does not inject workspace variables, then migrated to HashiCorp Vault ([ADR-0003](docs/adr/0003-vault-hosting.md), [ADR-0004](docs/adr/0004-hybrid-provisioning.md)).
 * Pre-commit scanning with `gitleaks`, `tflint`, and `trivy`.
 
@@ -78,9 +79,10 @@ client ──► Cloudflare public DNS
 - [x] Proxmox VE post-install on `pve` and `pve2`, cluster `hdti-homelab`
 - [x] Proxmox API roles, users, and tokens
 - [x] Hybrid provisioning decision ([ADR-0004](docs/adr/0004-hybrid-provisioning.md))
-- [ ] Technitium DNS (`dns-01`, `dns-02`) via community scripts, then router DHCP switch
-- [ ] Terraform DNS root (`terraform/environments/prod/dns/`, workspace `homelab-prod-dns`): zones and records
-- [ ] Caddy via community script, versioned Caddyfile, ACME certificates on PVE nodes
+- [x] Internal DNS zone `home.hdti.ca` and naming convention ([ADR-0005](docs/adr/0005-internal-dns-subdomain.md))
+- [ ] Technitium DNS cluster (`dns-01`, `dns-02`) via community scripts, then router DHCP switch
+- [ ] Terraform DNS root (`terraform/environments/prod/dns/`, workspace `homelab-prod-dns`): zone `home.hdti.ca` and records
+- [ ] Caddy via community script, versioned Caddyfile, wildcard `*.home.hdti.ca`
 - [ ] GitHub self-hosted runner
 - [ ] HashiCorp Vault and secrets migration
 - [ ] Pulse monitoring

@@ -51,25 +51,26 @@ Les adresses non listées de chaque plage sont réservées pour la croissance.
 
 ### DNS Split-Horizon
 
-Technitium héberge une **Conditional Forwarder Zone** pour `hdti.ca` : les enregistrements internes (`<svc>.hdti.ca`) sont résolus localement vers Caddy, tout le reste (enregistrements publics, autres domaines) est transmis à Cloudflare. Caddy sert un wildcard Let's Encrypt `*.hdti.ca` obtenu via le challenge DNS-01 Cloudflare. Seul WireGuard (UDP 51820) est exposé sur Internet. Voir [ADR-0002](../docs/adr/0002-split-horizon-dns.md).
+Technitium fait autorité sur la zone privée **`home.hdti.ca`** : les noms de services (`<svc>.home.hdti.ca`) pointent vers Caddy via un enregistrement wildcard, les noms d'hôtes (`pve`, `pve2`, `dns-01`, ...) vers leur propre IP, et tout autre nom est transmis à Cloudflare. Caddy sert un wildcard Let's Encrypt `*.home.hdti.ca` obtenu via le challenge DNS-01 Cloudflare. `hdti.ca` reste public chez Cloudflare et ne publie que `vpn.hdti.ca` ; WireGuard (UDP 51820) est le seul service exposé sur Internet. Les mêmes URL fonctionnent en LAN et via le VPN. Voir [ADR-0002](../docs/adr/0002-split-horizon-dns.md) et [ADR-0005](../docs/adr/0005-internal-dns-subdomain.md).
 
 ```
 INTERNE (LAN ou VPN)
-client ──► Technitium (.210 / .211)
-            ├─ <svc>.hdti.ca      → enregistrement local → Caddy (.212) ──TLS *.hdti.ca──► backend
-            └─ tout autre nom     → transmis à Cloudflare 1.1.1.1 (DoH)
+client ──► cluster Technitium (dns-01 .210 primaire / dns-02 .211)
+            ├─ <svc>.home.hdti.ca   → wildcard → Caddy (.212) ──TLS *.home.hdti.ca──► backend
+            ├─ <hôte>.home.hdti.ca  → enregistrement d'hôte → IP de l'hôte
+            └─ tout autre nom       → transmis à Cloudflare 1.1.1.1 / 1.0.0.1
 
 EXTERNE (Internet)
 client ──► DNS public Cloudflare
-            ├─ vpn.hdti.ca        → IP WAN (tenue à jour par DDNS .214, DNS only)
-            │                        └─► routeur UDP 51820 ──► WireGuard (.213) ──► flux INTERNE
-            └─ services internes  → non publiés
+            ├─ vpn.hdti.ca          → IP WAN (tenue à jour par DDNS .214, DNS only)
+            │                          └─► routeur UDP 51820 ──► WireGuard (.213) ──► flux INTERNE
+            └─ *.home.hdti.ca       → non publié
 ```
 
 ## Sécurité
 
 * L'automatisation Proxmox utilise des tokens API dédiés à privilèges minimaux avec séparation des privilèges (`terraform@pve!iac`, `packer@pve!build`, `pulse@pve!monitor`), jamais `root@pam`. Voir le [runbook tokens API Proxmox](../docs/runbooks/proxmox-api-tokens.md).
-* Les tokens Cloudflare sont limités à `Zone:DNS:Edit` sur `hdti.ca`, un par consommateur (Caddy, DDNS).
+* Les tokens Cloudflare sont limités à `hdti.ca`, un par consommateur (Caddy, DDNS), avec `Zone:DNS:Edit` ; le token de Caddy a aussi `Zone:Zone:Read`.
 * Les secrets sont d'abord fournis en variables d'environnement (poste de travail, puis GitHub Secrets sur le runner), car l'exécution locale HCP Terraform n'injecte pas les variables de workspace, puis migrés vers HashiCorp Vault ([ADR-0003](../docs/adr/0003-vault-hosting.md), [ADR-0004](../docs/adr/0004-hybrid-provisioning.md)).
 * Analyse avant commit avec `gitleaks`, `tflint` et `trivy`.
 
@@ -78,9 +79,10 @@ client ──► DNS public Cloudflare
 - [x] Post-installation Proxmox VE sur `pve` et `pve2`, cluster `hdti-homelab`
 - [x] Rôles, utilisateurs et tokens API Proxmox
 - [x] Décision de provisioning hybride ([ADR-0004](../docs/adr/0004-hybrid-provisioning.md))
-- [ ] Technitium DNS (`dns-01`, `dns-02`) via community scripts, puis bascule du DHCP du routeur
-- [ ] Root Terraform DNS (`terraform/environments/prod/dns/`, workspace `homelab-prod-dns`) : zones et enregistrements
-- [ ] Caddy via community script, Caddyfile versionné, certificats ACME sur les nœuds PVE
+- [x] Zone DNS interne `home.hdti.ca` et convention de nommage ([ADR-0005](../docs/adr/0005-internal-dns-subdomain.md))
+- [ ] Cluster Technitium DNS (`dns-01`, `dns-02`) via community scripts, puis bascule du DHCP du routeur
+- [ ] Root Terraform DNS (`terraform/environments/prod/dns/`, workspace `homelab-prod-dns`) : zone `home.hdti.ca` et enregistrements
+- [ ] Caddy via community script, Caddyfile versionné, wildcard `*.home.hdti.ca`
 - [ ] Runner GitHub self-hosted
 - [ ] HashiCorp Vault et migration des secrets
 - [ ] Supervision Pulse
