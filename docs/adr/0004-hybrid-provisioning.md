@@ -73,4 +73,5 @@ HCP Terraform workspaces run in local execution mode, so a provider that cannot 
 * [ ] GitHub Actions: Terraform PR checks/apply, Caddyfile validation and deployment.
 
 ## Corrections & Revisions
-* None.
+* 2026-10-04: Terraform scope narrowed by [ADR-0005](0005-internal-dns-subdomain.md): it manages the `home.hdti.ca` zone and its records only, applied to the primary node `dns-01`. Technitium server settings (forwarders, recursion, blocking, clustering) are applied by the runbook and synchronized by the cluster.
+* 2026-10-04: The community script installs the latest Technitium release (v15.6 on 2026-10-04). The `= 1.2.1` provider pin is re-evaluated against it when the DNS root is written; `darkhonor/technitium` v1.3.0 (released 2026-10-04) requires Technitium 15.0+.

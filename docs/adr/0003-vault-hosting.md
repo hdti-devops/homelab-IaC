@@ -55,3 +55,4 @@ The homelab needs a central secrets store for Terraform, Packer, GitHub Actions,
 ## Corrections & Revisions
 * 2026-10-02: HCP Terraform workspaces use local execution mode, where workspace variables are not injected. Bootstrap secrets live in environment variables (workstation, then GitHub Secrets) until Vault is deployed. See [ADR-0004](0004-hybrid-provisioning.md).
 * 2026-10-02: Provisioning method for the Vault LXC (Terraform or community script) is decided per service, see [ADR-0004](0004-hybrid-provisioning.md).
+* 2026-10-04: The UI/API is exposed as `vault.home.hdti.ca` (not `vault.hdti.ca`), following the internal zone of [ADR-0005](0005-internal-dns-subdomain.md).

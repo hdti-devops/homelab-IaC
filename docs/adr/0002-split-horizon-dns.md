@@ -1,6 +1,6 @@
 # [ADR-0002] Split-horizon DNS with Technitium, Caddy wildcard TLS, and WireGuard
 
-* **Status:** Accepted
+* **Status:** Accepted, partially superseded by [ADR-0005](0005-internal-dns-subdomain.md)
 * **Date:** 2026-10-02
 * **Deciders:** hdti-devops (homelab owner)
 
@@ -56,3 +56,4 @@ Internal services need friendly names under the public domain `hdti.ca` (Cloudfl
 ## Corrections & Revisions
 * 2026-10-02: `dns-01`, `dns-02`, `caddy`, and `wireguard` are provisioned with community scripts; the `hdti.ca` Forwarder zone, records, and Technitium settings are managed by Terraform (`darkhonor/technitium`); the Caddyfile is versioned in `config/caddy/Caddyfile`. See [ADR-0004](0004-hybrid-provisioning.md).
 * 2026-10-02: The community script xCaddy addon builds without extra modules: build with `xcaddy build --with github.com/caddy-dns/cloudflare`, replace the stock binary, and hold the package (`apt-mark hold caddy`) so upgrades do not restore it.
+* 2026-10-04: Superseded in part by [ADR-0005](0005-internal-dns-subdomain.md). The internal zone is the Primary zone `home.hdti.ca` (not a Forwarder zone for `hdti.ca`), services are named `<svc>.home.hdti.ca`, and Caddy's wildcard is `*.home.hdti.ca` with `resolvers 1.1.1.1` for the DNS-01 propagation check. The Caddy Cloudflare token also needs `Zone:Zone:Read`. PVE ACME certificates on the nodes are deferred. Technitium, Caddy, WireGuard, DDNS, and the single exposed UDP port are unchanged.
